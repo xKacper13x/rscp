@@ -103,7 +103,7 @@ message RequestEnvelope {
 /**
  * Task finished message.
  */
-message TaskFinished {}
+message RoverStatus {}
 
 /**
  * Rover status update.

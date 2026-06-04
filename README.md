@@ -14,11 +14,11 @@ Uzupełnienie prawdziwych nazw topików z ROS-a, zrobienie subskrybentów oraz o
 
 **Sposób testowania lokalnego:**
 1. Zainstaluj zależności: `pip install -r requirements.txt`
-2. Uruchom wirtualne porty: `socat -d -d pty,raw,echo=0 pty,raw,echo=0`
- ( trzeba je wpisać w main.py i rscp_transceiver.py)
-3. Zaktualizuj wygenerowane ścieżki portów (np. `/dev/pts/X`) w plikach `main.py` oraz `rscp_transceiver.py`.
-4. [Terminal 1] Uruchom główny węzeł: `python3 rscp_ros_bridge.py`
-5. [Terminal 2] Uruchom mock stacji bazowej: `python3 main.py`
-6. Natychmiastowo w pierwszym terminalu powinna pojawić się informacja o otrzymaniu polcenia 'navigate_to_gps',
+2. Skompilowanie pliku proto: `protoc -I=. --python_out=. rscp.proto`
+3. Uruchom wirtualne porty: `socat -d -d pty,raw,echo=0 pty,raw,echo=0`
+4. Zaktualizuj wygenerowane ścieżki portów (np. `/dev/pts/X`) w plikach `main.py` oraz `rscp_transceiver.py`.
+5. [Terminal 1] Uruchom główny węzeł: `python3 rscp_ros_bridge.py`
+6. [Terminal 2] Uruchom mock stacji bazowej: `python3 main.py`
+7. Natychmiastowo w pierwszym terminalu powinna pojawić się informacja o otrzymaniu polcenia 'navigate_to_gps',
     a w drugim powiadomienie o otrzymaniu ACK. Po 3 sekundach w drugim terminalu pojawia się wynik zadania i
     informacja o jego zakończeniu.
