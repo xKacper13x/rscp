@@ -12,18 +12,23 @@ class RscpRosBridge:
         command_failed = False
         match command:
             case 'navigate_to_gps':
-                print('Got command navigate_to_gps')
-                latitude = request.navigate_to_gps.coordinate.latitude
+                # TODO: wysłać polecenia przez rosa
+                pass
 
-                time.sleep(3)
-                self.send_gps_coordinates(latitude, 4.20, 21.15)
-                self.send_task_finished()
                 # Tu będzie wysłanie komendy do ros
             case _:
                 command_failed = True
 
         if not command_failed:
             self._transceiver.send_ack()
+
+        # Kod tymczasowy do testowania
+        print('Got command navigate_to_gps')
+        latitude = request.navigate_to_gps.coordinate.latitude
+
+        time.sleep(3)
+        self.send_gps_coordinates(latitude, 4.20, 21.15)
+        self.send_task_finished()
 
     def send_gps_coordinates(self, latitude: float,
                              longitude: float, altitude: float):

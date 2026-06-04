@@ -34,7 +34,6 @@ if __name__ == "__main__":
         if data == b"\x00":
             buffer += b"\x00"
             break
-            buffer = b""
         else:
             buffer += data
 
