@@ -8,7 +8,7 @@ class RscpRosBridge:
         self._transceiver = RscpTransceiver()
         self._transceiver.subscribe(self.receive_data)
 
-    def receive_data(self, command, request):
+    def receive_data(self, command: str, request):
         command_failed = False
         match command:
             case 'navigate_to_gps':
