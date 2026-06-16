@@ -22,3 +22,14 @@ Uzupełnienie prawdziwych nazw topików z ROS-a, zrobienie subskrybentów oraz o
 7. Natychmiastowo w pierwszym terminalu powinna pojawić się informacja o otrzymaniu polcenia 'navigate_to_gps',
     a w drugim powiadomienie o otrzymaniu ACK. Po 3 sekundach w drugim terminalu pojawia się wynik zadania i
     informacja o jego zakończeniu.
+
+
+
+Odpalenie dockera w terminalu
+docker ps: do sprawdzenia nazwy kontenera
+docker exec -it nice_jones bash
+
+kod znajduje się w /workspaces/rscp_test_python
+
+roscore --> w innym terminalu inicjuje rosa
+python3 -m scripts.rscp_ros_bridge: uruchamia bridgea

@@ -1,9 +1,10 @@
 import cobs
 import cobs.cobs
-import rscp_pb2
+import scripts.rscp_pb2 as rscp_pb2
 import io
 import time
 import serial
+import socket
 
 
 simulated_buffer = io.BytesIO(b'\x1c\x1a\x19\n\x17\tX9\xb4\xc8v\xbe\xf3?\x11\x83\xc0\xca\xa1E\xb6\x16@\x1d\xa1\xd6|?\x00')
@@ -17,16 +18,19 @@ def on_receive(data: bytes):
     # next step is to decode(parse) the protobuf message
     response.ParseFromString(cobs_decoded)
 
+    command = response.WhichOneof('response')
     print(f"Received new message at: {time.time()}")
-    print(f"Received Request type: {response.WhichOneof('response')}")
-    print(response)
+    print(f"Received Request type: {command}")
+
+    if command == 'rover_status':
+        print(f'{response.rover_status.coordinate.latitude}')
+    else:
+        print(response)
 
 
 if __name__ == "__main__":
     buffer = b""
     while True:
-        # instead of this, you may use serial.read() to read from serial port
-        # see receive_commands.py for serial example
         data = simulated_buffer.read(1)
         if not data:
             break
@@ -37,7 +41,7 @@ if __name__ == "__main__":
         else:
             buffer += data
 
-    ser = serial.Serial('/dev/pts/7', timeout=0.5,
+    ser = serial.Serial('/dev/pts/18', timeout=0.5,
                         baudrate=115200, parity='N', stopbits=1)
     ser.write(buffer)
     ser.flush()
