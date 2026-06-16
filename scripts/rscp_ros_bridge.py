@@ -27,10 +27,13 @@ class RscpRosBridge:
     def receive_data(self, command: str, request):
         command_failed = False
         if command == 'navigate_to_gps':
-                # TODO: wysłać polecenia przez rosa
-            pass
-                # Tu będzie wysłanie komendy do ros
+            # TODO: wysłać polecenia przez rosa
+            latitude = request.navigate_to_gps.coordinate.latitude
+            longitude = request.navigate_to_gps.coordinate.longitude
+            altitude = request.navigate_to_gps.coordinate.altitude
+            # Tu będzie wysłanie komendy do ros
         elif command == 'arm_disarm':
+            # TODO: wysłać polecenia przez rosa
             pass
         elif command == 'set_stage':
                 # TODO: wysłać polecenia przez rosa
@@ -38,7 +41,7 @@ class RscpRosBridge:
         elif command == 'search_area':
             # TODO: wysłać polecenia przez rosa
             pass
-        elif command == 'set_stage':
+        elif command == 'start_exploration':
                 # TODO: wysłać polecenia przez rosa
             pass
         else:
@@ -50,9 +53,9 @@ class RscpRosBridge:
         # Kod tymczasowy do testowania
         print('Got command navigate_to_gps')
         latitude = request.navigate_to_gps.coordinate.latitude
-
+        self.send_gps_coordinates(latitude, 4.2, 67.69)
         time.sleep(3)
-        self.send_gps_coordinates(latitude, 4.20, 21.15)
+
         self.send_task_finished()
 
     def send_gps_coordinates(self, latitude: float,
