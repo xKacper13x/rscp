@@ -71,17 +71,16 @@ class RscpRosBridge:
                                                 state_of_charge)
         try:
             self._transceiver.send_message(battery_state)
-        except TypeError:
-            # Tu będzie wypisanie ostrzeżenia w rospy.logerr
-            pass
+        except TypeError as e:
+            rospy.logerr(e)
+
 
     def send_distance(self, distance: float):
         measured_distance = rscp_types.MeasuredDistance(distance)
         try:
             self._transceiver.send_message(measured_distance)
-        except TypeError:
-            # Tu będzie wypisanie ostrzeżenia w rospy.logerr
-            pass
+        except TypeError as e:
+            rospy.logerr(e)
 
     def send_task_finished(self):
         self._transceiver.send_task_finished()
