@@ -1,5 +1,5 @@
 __pycache__
 venv/
-scripts/rscp_pb2.py
+git rm --cached rscp_pb2.py
 .devcontainer
 scripts/__pycache__
