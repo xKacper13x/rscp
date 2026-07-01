@@ -14,7 +14,6 @@ from rscp_bridge.msg import AutonomyCommand, AutonomyEvent
 from geometry_msgs.msg import Twist
 import pymap3d
 
-Acknowledge = 0
 ArmDisarm = 1
 SetStage = 2
 NavigateToGPS = 3
@@ -141,6 +140,7 @@ class Autonomy:
         self.drop_repeater()
 
         # Otrzymanie wiadomości o ukończeniu zadania
+        # TODO: Dodać prawdziwy GPS
         event_message = EventMessage(Location3D)
         self.send_event_message(event_message)
         self.set_lamp("green")
@@ -154,10 +154,11 @@ class Autonomy:
         self.set_lamp("green")
 
         message = self.await_message(SearchArea)
-        self.navigate_to(message.latitude, message.longitude)
         self.set_lamp("yellow")
+        self.navigate_to(message.latitude, message.longitude)
 
         # Znaleziono kamień
+        # TODO: Dodać prawdziwy GPS
         event_message = EventMessage(Location3D)
         self.send_event_message(event_message)
         self.set_lamp("green")
@@ -191,6 +192,24 @@ class Autonomy:
         self.send_event_message(event_message)
         self.set_lamp("green")
         rospy.loginfo("Stage three done")
+
+    def stage_four(self):
+        rospy.loginfo("Beginning stage four")
+        self.set_lamp("green")
+        message = self.await_message(NavigateToGPS)
+
+        self.set_lamp("yellow")
+        self.navigate_to(message.latitude, message.longitude)
+
+        self.set_lamp("green")
+        event_message = EventMessage(TaskCompleted)
+        self.send_event_message(event_message)
+
+        self.set_lamp("yellow")
+        # self.locate_airlock_entrance()
+        self.await_message(ArmDisarm)
+        self.set_lamp("red")
+        rospy.loginfo("Mission completed")
 
     def arm(self):
         rospy.loginfo("Rover armed")

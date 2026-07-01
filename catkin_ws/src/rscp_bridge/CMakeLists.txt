@@ -59,7 +59,7 @@ add_message_files(
 #   Service1.srv
 #   Service2.srv
 # )
-
+AutonomyCommand.msgAutonomyCommand.msg
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
