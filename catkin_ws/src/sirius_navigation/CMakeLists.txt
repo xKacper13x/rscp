@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16.3...3.28.1)
 project(sirius_navigation)
-find_package(catkin REQUIRED COMPONENTS rospy)
+find_package(catkin REQUIRED COMPONENTS
+rospy
+rscp_bridge
+)
+
 catkin_package()
 
 catkin_install_python(

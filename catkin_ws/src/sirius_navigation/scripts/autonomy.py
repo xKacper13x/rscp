@@ -1,32 +1,29 @@
 #! /usr/bin/python3
 
 import rospy
-import struct
 import threading
+from dataclasses import dataclass
+import queue
 from std_msgs.msg import Float32, Empty, String
 from geometry_msgs.msg import PoseStamped
 from mbf_msgs.msg import MoveBaseAction
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatus
 from mbf_msgs.msg import MoveBaseAction, MoveBaseGoal
-from rscp_bridge.msg import AutonomyCommand
+from rscp_bridge.msg import AutonomyCommand, AutonomyEvent
 from geometry_msgs.msg import Twist
 import pymap3d
 
-Acknowledge = 0x00
+Acknowledge = 0
 ArmDisarm = 1
 SetStage = 2
 NavigateToGPS = 3
 SearchArea = 4
 StartExploration = 5
 
-TaskCompleted = 0x03
-Text = 0x05
-ArucoTag = 0x06
-LocateArucoTags = 0x07
-Location3D = 0x08
-Detection = 0x09
-SetParameters = 0x0A
+TaskCompleted = 0
+Location3D = 1
+Distance = 2
 
 # map_origin_coords = (39.9013943, 32.7704792, 907.476)
 
@@ -42,16 +39,21 @@ hold_repeater = True
 lamp_color = "red"
 
 
-def bits_to_float(value):
-    value_bits = struct.pack("I", value)
-    return struct.unpack("f", value_bits)[0]
-
-
 class Message:
 
     def __init__(self, message_id, data):
         self.message_id = message_id
         self.data = data
+
+
+@dataclass
+class EventMessage:
+    event_id: int
+
+    latitude: float = 0.0
+    longitude: float = 0.0
+    altitude: float = 0.0
+    length: float = 0.0
 
 
 class Navigator:
@@ -92,8 +94,10 @@ class Autonomy:
 
         self._command_subscriber = rospy.Subscriber("/autonomy/commands", AutonomyCommand,
                                                     self._autonomy_command_callback)
+        self._event_publisher = rospy.Publisher("/autonomy/events", AutonomyEvent)
 
         self.navigator = Navigator()
+        self._command_queue = queue.Queue()
         self.stages_done = []
 
     def run(self):
@@ -101,82 +105,91 @@ class Autonomy:
         self.set_lamp("red")
         self.set_lamp("yellow")
         self.set_lamp("red")
-        message = self.rs232.await_message(SetParameters)
-        self.rs232.send_ack()
 
-        while len(self.stages_done) < 3:
-            message = self.rs232.await_message(SetStage)
-            self.rs232.send_ack()
-            self.stage = message["data"][0]
-            rospy.loginfo(f"Satellite requested stage {self.stage}")
-            if self.stage not in self.stages_done:
-                if self.stage == 1:
+        while len(self.stages_done) < 4:
+            message = self.await_message(SetStage)
+            stage = message.new_stage_num
+            rospy.loginfo(f"Satellite requested stage {stage}")
+            if stage not in self.stages_done:
+                if stage == 1:
                     self.stage_one()
                     self.stages_done.append(1)
-                if self.stage == 2:
+                if stage == 2:
                     self.stage_two()
                     self.stages_done.append(2)
-                if self.stage == 3:
+                if stage == 3:
                     self.stage_three()
                     self.stages_done.append(3)
+                if stage == 4:
+                    self.stage_four()
+                    self.stages_done.append(4)
 
         rospy.loginfo("Autonomy done. Thank you")
 
     def stage_one(self):
         rospy.loginfo("Beginning stage one")
-        self.rs232.await_message(ArmDisarm)
+        self.set_lamp("red")
+        self.await_message(ArmDisarm)
         self.arm()
         self.set_lamp("green")
-        self.rs232.send_ack()
-        message = self.rs232.await_message(NavigateToGPS)
-        self.rs232.send_ack()
+        message = self.await_message(SearchArea)
         self.set_lamp("yellow")
-        target = self.parse_navigation_command(message["data"])
+
         self.leave_airlock()
-        self.navigate_to(*target)
+        self.navigate_to(message.latitude, message.longitude)
         rospy.sleep(4)
         self.drop_repeater()
+
+        # Otrzymanie wiadomości o ukończeniu zadania
+        event_message = EventMessage(Location3D)
+        self.send_event_message(event_message)
         self.set_lamp("green")
-        self.rs232.send_task_completed()
+
+        event_message.event_id = TaskCompleted
+        self.send_event_message(event_message)
         rospy.loginfo("Stage one done")
 
     def stage_two(self):
         rospy.loginfo("Beginning stage two")
         self.set_lamp("green")
-        message = self.rs232.await_message(NavigateToGPS)
-        self.rs232.send_ack()
+
+        message = self.await_message(SearchArea)
+        self.navigate_to(message.latitude, message.longitude)
         self.set_lamp("yellow")
-        target = self.parse_navigation_command(message["data"])
-        self.navigate_to(*target)
+
+        # Znaleziono kamień
+        event_message = EventMessage(Location3D)
+        self.send_event_message(event_message)
         self.set_lamp("green")
-        self.rs232.send_task_completed()
-        message = self.rs232.await_message(LocateArucoTags)
-        self.rs232.send_ack()
-        self.set_lamp("yellow")
-        self.go_to_lavatube()
-        self.rs232.send_task_completed()
-        self.set_lamp("green")
+
+        event_message.event_id = TaskCompleted
+        self.send_event_message(event_message)
         rospy.loginfo("Stage two done")
 
     def stage_three(self):
         rospy.loginfo("Beginning stage three")
         self.set_lamp("green")
-        message = self.rs232.await_message(NavigateToGPS)
-        self.rs232.send_ack()
+        message = self.await_message(NavigateToGPS)
+
         self.set_lamp("yellow")
-        target = self.parse_navigation_command(message["data"])
-        self.navigate_to(*target)
+        self.navigate_to(message.latitude, message.longitude)
+
         self.set_lamp("green")
-        self.rs232.send_task_completed()
-        self.rs232.await_message(LocateArucoTags)
-        self.rs232.send_ack()
+        event_message = EventMessage(TaskCompleted)
+        self.send_event_message(event_message)
+        # self.locate_tube_entrance()
+        self.await_message(StartExploration)
         self.set_lamp("yellow")
-        self.go_to_base()
+
+        # Tu jest mierzenie tunelu
+        tube_length = 0
+        event_message = EventMessage(Distance,
+                                     length=tube_length)
+        self.send_event_message(event_message)
+
+        event_message.event_id = TaskCompleted
+        self.send_event_message(event_message)
         self.set_lamp("green")
-        self.rs232.send_task_completed()
-        self.rs232.await_message(ArmDisarm)
-        self.rs232.send_ack()
-        self.set_lamp("red")
         rospy.loginfo("Stage three done")
 
     def arm(self):
@@ -186,19 +199,6 @@ class Autonomy:
         global lamp_color
         rospy.loginfo(f"Setting the lamp to {color}")
         lamp_color = color
-
-    def parse_navigation_command(self, command_data):
-        lat_repr = (command_data[0] << 24
-                    | command_data[1] << 16
-                    | command_data[2] << 8
-                    | command_data[3])
-        long_repr = (command_data[4] << 24
-                     | command_data[5] << 16
-                     | command_data[6] << 8
-                     | command_data[7])
-        lat = bits_to_float(lat_repr)
-        long = bits_to_float(long_repr)
-        return (lat, long)
 
     def leave_airlock(self):
         cmd_vel_publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
@@ -251,15 +251,27 @@ class Autonomy:
         # self.navigate_to(*base_coords)
 
     def await_message(self, expected_command_id):
-        pass
+        while not rospy.is_shutdown():
+            next_command = self._command_queue.get()
+            command_id = next_command.command_id
+            if command_id == expected_command_id:
+                return next_command
+
+    def send_event_message(self, data):
+        message = AutonomyEvent()
+
+        message.event_id = data.event_id
+        if data.event_id == Location3D:
+            message.latitude = data.latitude
+            message.longitude = data.longitude
+            message.altitude = data.altitude
+        elif data.event_id == Distance:
+            message.distance = data.length
+
+        self._event_publisher.publish(message)
 
     def _autonomy_command_callback(self, data):
-        command_id = data.command_id
-
-        if command_id == 1:
-            pass
-        elif command_id == 2:
-            self.stage = data.new_stage_num
+        self._command_queue.put(data)
 
 
 if __name__ == "__main__":
