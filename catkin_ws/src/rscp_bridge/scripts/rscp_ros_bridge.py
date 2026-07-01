@@ -127,6 +127,5 @@ class RscpRosBridge:
 
 if __name__ == '__main__':
     bridge = RscpRosBridge()
-    print('Started RSCP ROS Bridge')
 
     rospy.spin()
