@@ -1,16 +1,16 @@
 import cobs
 import cobs.cobs
-import scripts.rscp_pb2 as rscp_pb2
+import rscp_pb2 as rscp_pb2
 import serial
 import threading
 import google.protobuf
-import scripts.rscp_types as rscp_types
+import rscp_types as rscp_types
 
 
 class RscpTransceiver:
-    def __init__(self):
-        self._serial = serial.Serial('/dev/pts/4', timeout=0.5,
-                                     baudrate=115200, parity='N', stopbits=1)
+    def __init__(self, port, baudrate):
+        self._serial = serial.Serial(port, timeout=0.5,
+                                     baudrate=baudrate, parity='N', stopbits=1)
         self._callback_function = None
 
         reading_thread = threading.Thread(target=self._listen_serial,
